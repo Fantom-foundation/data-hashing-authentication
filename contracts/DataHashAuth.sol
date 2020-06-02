@@ -26,7 +26,7 @@ contract DataHashAuth {
 
 	// add adds new authentic product data set.
 	// Only contract manager is allowed to perform this function.
-	function add(
+	function addProduct(
 		bytes memory name,
 		bytes memory batchNo,
 		bytes memory barcodeNo,
@@ -74,7 +74,7 @@ contract DataHashAuth {
 	// auth validates product authenticity for the given product data set
 	// using an internal authentic products list. Anybody can authenticate
 	// products using this function, no access restrictions are applied.
-	function auth(
+	function authProduct(
 		bytes memory name,
 		bytes memory batchNo,
 		bytes memory barcodeNo,

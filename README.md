@@ -40,14 +40,14 @@ The contract expects and validates following product attributes:
 ##Public Functions
 The contract offers two major functions:
 
-- Function `add` consumes list of product attributes,makes basic validation checks, 
+- Function `addProduct` consumes list of product attributes,makes basic validation checks, 
   calculates the product hash and adds the hash into it's internal state. This function has 
   to be called from a signed transaction and mutates the internal state. The function can be called only
   from an address which deployed the original contract, so called owner.
    
   This function also emits an event `HashAdded` on success. These events can be captured, or filtered later.
   
-- Function `auth` authenticates a product by consuming the product attributes and checking 
+- Function `authProduct` authenticates a product by consuming the product attributes and checking 
   the corresponding hash with its internal state. The same rules for attributes apply here.
   
 ##The Contract Abi

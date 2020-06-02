@@ -1,0 +1,15 @@
+{
+  "name": "data-hashing-auth-demo",
+  "version": "1.0.0",
+  "description": "Demo of Data Hashing Authentication smart contract interaction.",
+  "main": "index.js",
+  "author": "Fantom Foundation",
+  "license": "MIT",
+  "dependencies": {
+    "ethereumjs-tx": "^2.1.2",
+    "web3": "^1.2.8"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  }
+}

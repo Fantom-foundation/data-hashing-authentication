@@ -40,21 +40,23 @@ client.eth.getBlockNumber().then(async (blockNum) => {
     // ------------------------------------------------------
     // validate that the first test product is not known yet
     // ------------------------------------------------------
+    const randomProduct = cfg.getProductParams(cfg.products[0]);
+
     // it should not be since we generate expiry timestamp from the current local time
     // @see config.js for the details
     console.log("Testing random product: ", cfg.products[0].name);
-    let res = await contract.authProduct(
-        cfg.products[0].name,
-        cfg.products[0].batchNo,
-        cfg.products[0].barcodeNo,
-        cfg.products[0].expiryDate,
-        cfg.products[0].productionDate,
-        cfg.products[0].fdaNo,
-        cfg.products[0].producerName,
-        cfg.products[0].scanLocation,
-        cfg.products[0].scanStatus,
-        cfg.products[0].scanTime,
-        cfg.products[0].scanDate
+    let res = await contract.methods.authProduct(
+        randomProduct.name,
+        randomProduct.batchNo,
+        randomProduct.barcodeNo,
+        randomProduct.expiryDate,
+        randomProduct.productionDate,
+        randomProduct.fdaNo,
+        randomProduct.producerName,
+        randomProduct.scanLocation,
+        randomProduct.scanStatus,
+        randomProduct.scanTime,
+        randomProduct.scanDate
     ).call();
 
     // log the result
@@ -67,17 +69,17 @@ client.eth.getBlockNumber().then(async (blockNum) => {
 
     // add the random product to contract database
     const addData = contract.methods.addProduct(
-        cfg.products[0].name,
-        cfg.products[0].batchNo,
-        cfg.products[0].barcodeNo,
-        cfg.products[0].expiryDate,
-        cfg.products[0].productionDate,
-        cfg.products[0].fdaNo,
-        cfg.products[0].producerName,
-        cfg.products[0].scanLocation,
-        cfg.products[0].scanStatus,
-        cfg.products[0].scanTime,
-        cfg.products[0].scanDate
+        randomProduct.name,
+        randomProduct.batchNo,
+        randomProduct.barcodeNo,
+        randomProduct.expiryDate,
+        randomProduct.productionDate,
+        randomProduct.fdaNo,
+        randomProduct.producerName,
+        randomProduct.scanLocation,
+        randomProduct.scanStatus,
+        randomProduct.scanTime,
+        randomProduct.scanDate
     ).encodeABI();
 
     // construct the mutating transaction for adding a new product
@@ -91,18 +93,18 @@ client.eth.getBlockNumber().then(async (blockNum) => {
     // validate that the random product is known now
     // ------------------------------------------------------
     console.log("Testing random product again: ", cfg.products[0].name);
-    res = await contract.authProduct(
-        cfg.products[0].name,
-        cfg.products[0].batchNo,
-        cfg.products[0].barcodeNo,
-        cfg.products[0].expiryDate,
-        cfg.products[0].productionDate,
-        cfg.products[0].fdaNo,
-        cfg.products[0].producerName,
-        cfg.products[0].scanLocation,
-        cfg.products[0].scanStatus,
-        cfg.products[0].scanTime,
-        cfg.products[0].scanDate
+    res = await contract.methods.authProduct(
+        randomProduct.name,
+        randomProduct.batchNo,
+        randomProduct.barcodeNo,
+        randomProduct.expiryDate,
+        randomProduct.productionDate,
+        randomProduct.fdaNo,
+        randomProduct.producerName,
+        randomProduct.scanLocation,
+        randomProduct.scanStatus,
+        randomProduct.scanTime,
+        randomProduct.scanDate
     ).call();
 
     // log the result

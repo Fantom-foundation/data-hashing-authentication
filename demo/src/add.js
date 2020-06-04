@@ -7,14 +7,14 @@
  * @version 1.0.0
  */
 // import demo data
-const cfg = require('./config_mainnet');
+const cfg = require('./config_testnet');
 const utils = require('./utils');
 
 // import needed libs
 const Web3 = require('web3');
 
 // setup Lachesis server provider used for all Web3 RPC calls
-const provider = new Web3.providers.HttpProvider(cfg.rpc.address);
+const provider = new Web3.providers.WebsocketProvider(cfg.rpc.address);
 
 // initialize the Web3 client using configured provider
 const client = new Web3(provider);
@@ -42,8 +42,14 @@ client.eth.getBlockNumber().then(async (blockNum) => {
     // try to add the product to the contract
     console.log("Random product", cfg.products[0].name, "is being added to the contract.");
     await utils.addProduct(cfg.products[0], contract, cfg.owner, client);
+
+    // disconnect
+    return provider.disconnect();
 }).catch(e => {
     // connection failed, inform about the situation
     // we can not continue
     console.log("Smart contract interaction failed!\n", e.toString())
+
+    // disconnect
+    return provider.disconnect();
 });

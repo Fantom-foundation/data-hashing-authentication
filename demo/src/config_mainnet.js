@@ -10,7 +10,7 @@ module.exports = {
     rpc: {
         // address of the RPC interface of the Lachesis node used
         // to interact with the blockchain
-        address: "https://xapi1.fantom.network/lachesis",
+        address: "wss://xapi1.fantom.network/lachesisws",
     },
 
     // owner of the contract

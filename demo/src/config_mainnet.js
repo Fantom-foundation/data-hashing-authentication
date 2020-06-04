@@ -10,7 +10,7 @@ module.exports = {
     rpc: {
         // address of the RPC interface of the Lachesis node used
         // to interact with the blockchain
-        address: "https://xapi.testnet.fantom.network/lachesis",
+        address: "https://xapi1.fantom.network/lachesis",
     },
 
     // owner of the contract
@@ -35,7 +35,7 @@ module.exports = {
         // define the address on which the contract is deployed
         // this address is determined on contract deployment process
         // and does not change over time since deployed contracts are immutable
-        address: '0xa0cb4997507a390d94c65ad4a86bbfadda549d97'
+        address: '0xd1728b465e62abe6550179ba03d52130c1960274'
     },
 
     // testing data
@@ -44,7 +44,7 @@ module.exports = {
         // since the expiry date is part of the hashing process
         // and we generate it from the current local time
         {
-            name: "Rebus",
+            name: "Rebus Main",
             batchNo: "2020.05.0141321",
             barcodeNo: (Math.random() * (999999999 - 111111111)+ 111111111).toString(),
             expiryDate: Math.ceil(Date.now() / 1000) + (86400 * 180),
@@ -61,7 +61,7 @@ module.exports = {
         // available for validation; scan timestamps do not contribute
         // to the product hash
         {
-            name: "Viribus",
+            name: "Viribus Main",
             batchNo: "2020.01.151615",
             barcodeNo: "202001151615",
             expiryDate: Math.ceil(new Date("2025-12-31") / 1000),

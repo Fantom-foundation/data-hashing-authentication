@@ -35,7 +35,7 @@ module.exports = {
         // define the address on which the contract is deployed
         // this address is determined on contract deployment process
         // and does not change over time since deployed contracts are immutable
-        address: '0xd1728b465e62abe6550179ba03d52130c1960274'
+        address: '0x48b272d08618e4da01f4980dbcb464f2be618f17'
     },
 
     // testing data
@@ -53,8 +53,10 @@ module.exports = {
             producerName: "Factorem Productum",
             scanLocation: "Forum Loco",
             scanStatus: "ok",
-            scanTime: Math.ceil(Date.now() / 1000),
-            scanDate: Math.ceil(Date.now() / 1000)
+
+            /* we take 60 seconds down so we don't collide with the block timestamp */
+            scanTime: Math.ceil(Date.now() / 1000) - 60,
+            scanDate: Math.ceil(Date.now() / 1000) - 60
         },
 
         // static product; once added, it should be always
@@ -70,8 +72,10 @@ module.exports = {
             producerName: "Factorem Productum",
             scanLocation: "Forum Loco",
             scanStatus: "ok",
-            scanTime: Math.ceil(Date.now() / 1000),
-            scanDate: Math.ceil(Date.now() / 1000)
+
+            /* we take 60 seconds down so we don't collide with the block timestamp */
+            scanTime: Math.ceil(Date.now() / 1000) - 60,
+            scanDate: Math.ceil(Date.now() / 1000) - 60
         }
     ]
 };

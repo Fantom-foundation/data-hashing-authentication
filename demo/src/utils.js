@@ -90,7 +90,7 @@ async function getSignedTransaction(sender, pk, contractAddress, encodedData, we
         nonce: Utils.toHex(txCount),
         to: contractAddress,
         value: Utils.toHex(Utils.toWei('0', 'ether')),
-        gasLimit: Utils.toHex(1500000),
+        gasLimit: Utils.toHex(2500000),
         gasPrice: Utils.toHex(gasPrice),
         data: encodedData
     };
@@ -131,21 +131,27 @@ module.exports = {
 
         // parse product params
         const params = getProductParams(product);
+        let res;
 
         // execute the product test call
-        const res = await contract.methods.authProduct(
-            params.name,
-            params.batchNo,
-            params.barcodeNo,
-            params.expiryDate,
-            params.productionDate,
-            params.fdaNo,
-            params.producerName,
-            params.scanLocation,
-            params.scanStatus,
-            params.scanTime,
-            params.scanDate
-        ).call();
+        try {
+            res = await contract.methods.authProduct(
+                params.name,
+                params.batchNo,
+                params.barcodeNo,
+                params.expiryDate,
+                params.productionDate,
+                params.fdaNo,
+                params.producerName,
+                params.scanLocation,
+                params.scanStatus,
+                params.scanTime,
+                params.scanDate
+            ).call();
+        } catch (e) {
+            console.log("Product", product.name, "not found.");
+            return {0: '', 1: 0};
+        }
 
         // what's the result
         if (isProductKnown(res)) {

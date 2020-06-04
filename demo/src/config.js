@@ -5,22 +5,24 @@
  * @author Fantom Foundation, (c) 2020
  * @version 1.0.0
  */
-// load needed libs
-const {utils: Utils} = require('web3');
-const Tx = require('ethereumjs-tx');
-
 // export configs and helpers
 module.exports = {
+    rpc: {
+        // address of the RPC interface of the Lachesis node used
+        // to interact with the blockchain
+        address: "https://xapi.testnet.fantom.network/lachesis",
+    },
+
     // owner of the contract
     // represents the account authorized to add new products to the contract
     // is determined on contract deployment
     owner: {
         // address of the contract owner / manager
-        address: '',
+        address: '0xe46839D86997C38D53E5a9AaFC320EB6b51BABAc',
 
         // private key of the owner
         // @note This has to be kept secret and managed in a secure way on real app!
-        pk: ''
+        pk: 'cc736dc1cf9ee5256494d5465b4e2e5548196942f7ee98b38d14fee0e63f24bf',
     },
 
     // smart contract details
@@ -28,12 +30,12 @@ module.exports = {
         // the ABI of deployed contract never changes since the contract in the blockchain is immutable
         // you can find the ABI on the contract GitHub.com page
         // @see https://github.com/Fantom-foundation/data-hashing-authentication/blob/master/README.md
-        abi: '[{"inputs":[],"stateMutability":"payable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes32","name":"hash","type":"bytes32"},{"indexed":false,"internalType":"uint256","name":"time","type":"uint256"}],"name":"HashAdded","type":"event"},{"inputs":[{"internalType":"bytes","name":"name","type":"bytes"},{"internalType":"bytes","name":"batchNo","type":"bytes"},{"internalType":"bytes","name":"barcodeNo","type":"bytes"},{"internalType":"uint256","name":"expiryDate","type":"uint256"},{"internalType":"uint256","name":"productionDate","type":"uint256"},{"internalType":"uint256","name":"fdaNo","type":"uint256"},{"internalType":"bytes","name":"producerName","type":"bytes"},{"internalType":"bytes","name":"scanLocation","type":"bytes"},{"internalType":"bytes","name":"scanStatus","type":"bytes"},{"internalType":"uint256","name":"scanTime","type":"uint256"},{"internalType":"uint256","name":"scanDate","type":"uint256"}],"name":"addProduct","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"bytes","name":"name","type":"bytes"},{"internalType":"bytes","name":"batchNo","type":"bytes"},{"internalType":"bytes","name":"barcodeNo","type":"bytes"},{"internalType":"uint256","name":"expiryDate","type":"uint256"},{"internalType":"uint256","name":"productionDate","type":"uint256"},{"internalType":"uint256","name":"fdaNo","type":"uint256"},{"internalType":"bytes","name":"producerName","type":"bytes"},{"internalType":"bytes","name":"scanLocation","type":"bytes"},{"internalType":"bytes","name":"scanStatus","type":"bytes"},{"internalType":"uint256","name":"scanTime","type":"uint256"},{"internalType":"uint256","name":"scanDate","type":"uint256"}],"name":"authProduct","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"},{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"manager","outputs":[{"internalType":"address payable","name":"","type":"address"}],"stateMutability":"view","type":"function"}]',
+        abi: '[{"inputs":[],"payable":true,"stateMutability":"payable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes32","name":"hash","type":"bytes32"},{"indexed":false,"internalType":"uint256","name":"time","type":"uint256"}],"name":"HashAdded","type":"event"},{"constant":false,"inputs":[{"internalType":"bytes","name":"name","type":"bytes"},{"internalType":"bytes","name":"batchNo","type":"bytes"},{"internalType":"bytes","name":"barcodeNo","type":"bytes"},{"internalType":"uint256","name":"expiryDate","type":"uint256"},{"internalType":"uint256","name":"productionDate","type":"uint256"},{"internalType":"uint256","name":"fdaNo","type":"uint256"},{"internalType":"bytes","name":"producerName","type":"bytes"},{"internalType":"bytes","name":"scanLocation","type":"bytes"},{"internalType":"bytes","name":"scanStatus","type":"bytes"},{"internalType":"uint256","name":"scanTime","type":"uint256"},{"internalType":"uint256","name":"scanDate","type":"uint256"}],"name":"addProduct","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"payable":true,"stateMutability":"payable","type":"function"},{"constant":true,"inputs":[{"internalType":"bytes","name":"name","type":"bytes"},{"internalType":"bytes","name":"batchNo","type":"bytes"},{"internalType":"bytes","name":"barcodeNo","type":"bytes"},{"internalType":"uint256","name":"expiryDate","type":"uint256"},{"internalType":"uint256","name":"productionDate","type":"uint256"},{"internalType":"uint256","name":"fdaNo","type":"uint256"},{"internalType":"bytes","name":"producerName","type":"bytes"},{"internalType":"bytes","name":"scanLocation","type":"bytes"},{"internalType":"bytes","name":"scanStatus","type":"bytes"},{"internalType":"uint256","name":"scanTime","type":"uint256"},{"internalType":"uint256","name":"scanDate","type":"uint256"}],"name":"authProduct","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"},{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"manager","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"}]',
 
         // define the address on which the contract is deployed
         // this address is determined on contract deployment process
         // and does not change over time since deployed contracts are immutable
-        address: ''
+        address: '0xa0cb4997507a390d94c65ad4a86bbfadda549d97'
     },
 
     // testing data
@@ -44,15 +46,15 @@ module.exports = {
         {
             name: "Rebus",
             batchNo: "2020.05.0141321",
-            barcodeNo: "2020050141321",
-            expiryDate: (Date.now() / 1000) + (86400 * 180),
-            productionDate: new Date("2020-05-25").valueOf() / 1000,
+            barcodeNo: (Math.random() * (999999999 - 111111111)+ 111111111).toString(),
+            expiryDate: Math.ceil(Date.now() / 1000) + (86400 * 180),
+            productionDate: Math.ceil(new Date("2020-05-25").valueOf() / 1000),
             fdaNo: 73737373,
             producerName: "Factorem Productum",
             scanLocation: "Forum Loco",
             scanStatus: "ok",
-            scanTime: Date.now() / 1000,
-            scanDate: Date.now() / 1000
+            scanTime: Math.ceil(Date.now() / 1000),
+            scanDate: Math.ceil(Date.now() / 1000)
         },
 
         // static product; once added, it should be always
@@ -62,59 +64,14 @@ module.exports = {
             name: "Viribus",
             batchNo: "2020.01.151615",
             barcodeNo: "202001151615",
-            expiryDate: new Date("2025-12-31") / 1000,
-            productionDate: new Date("2020-05-25").valueOf() / 1000,
+            expiryDate: Math.ceil(new Date("2025-12-31") / 1000),
+            productionDate: Math.ceil(new Date("2020-05-25").valueOf() / 1000),
             fdaNo: 73737373,
             producerName: "Factorem Productum",
             scanLocation: "Forum Loco",
             scanStatus: "ok",
-            scanTime: Date.now() / 1000,
-            scanDate: Date.now() / 1000
+            scanTime: Math.ceil(Date.now() / 1000),
+            scanDate: Math.ceil(Date.now() / 1000)
         }
-    ],
-
-    // getProductParams encodes product data for the contract call.
-    getProductParams: function (product) {
-        return {
-            name: Utils.hexToBytes(Utils.utf8ToHex(product.name)),
-            batchNo: Utils.hexToBytes(Utils.utf8ToHex(product.batchNo)),
-            barcodeNo: Utils.hexToBytes(Utils.utf8ToHex(product.barcodeNo)),
-            expiryDate: Utils.numberToHex(product.expiryDate),
-            productionDate: Utils.numberToHex(product.productionDate),
-            fdaNo: Utils.numberToHex(product.fdaNo),
-            producerName: Utils.hexToBytes(Utils.utf8ToHex(product.producerName)),
-            scanLocation: Utils.hexToBytes(Utils.utf8ToHex(product.scanLocation)),
-            scanStatus: Utils.hexToBytes(Utils.utf8ToHex(product.scanStatus)),
-            scanTime: Utils.numberToHex(product.scanTime),
-            scanDate: Utils.numberToHex(product.scanDate)
-        };
-    },
-
-    // getSignedTransaction creates and signs transaction
-    // for provided encoded data (smart contract mutating call)
-    getSignedTransaction: async function (sender, pk, contractAddress, encodedData, web3Client) {
-        // get sender's nonce so we can build the transaction
-        const txCount = await web3Client.eth.getTransactionCount(sender);
-
-        // create the transaction object
-        const txObject = {
-            nonce: Utils.toHex(txCount),
-            to: contractAddress,
-            value: Utils.toHex(Utils.toWei('0', 'ether')),
-            gasLimit: Utils.toHex(2100000),
-            gasPrice: Utils.toHex(Utils.toWei('6', 'gwei')),
-            data: encodedData
-        };
-
-        // prep PK for signing
-        // this should be much safer in the real application
-        const privateKey = Buffer.from(pk, 'hex');
-
-        // construct the transaction object
-        const tx = new Tx(txObject);
-        tx.sign(privateKey);
-
-        // return the signed transaction data
-        return '0x' + tx.serialize().toString('hex');
-    }
+    ]
 };

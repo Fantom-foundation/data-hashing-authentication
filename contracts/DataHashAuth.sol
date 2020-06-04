@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.5.0 <0.7.0;
+pragma solidity ^0.5.0;
 
 // DataHashAuth implements contract for registering authentic
 // products hash inside the ledger by hashing their unique attributes
@@ -7,7 +7,7 @@ pragma solidity >=0.5.0 <0.7.0;
 contract DataHashAuth {
 	// manager is the account allowed to register new authentic products
 	// to the contract.
-	address payable public manager;
+	address public manager;
 
 	// products store mapping between authentic product hash and registration
 	// timestamp, the time stamp can be taken from the processing block since
@@ -40,7 +40,7 @@ contract DataHashAuth {
 		uint scanDate
 	) public payable returns (bytes32) {
 		// make sure this is the manager
-		require(msg.sender == manager);
+		require(msg.sender == manager, "only managers can add new products");
 
 		// make sure this is a valid product
 		require(_isValid(

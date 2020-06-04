@@ -180,12 +180,12 @@ contract DataHashAuth {
 		}
 
 		// scan time must be in the past
-		if (scanTime <= now) {
+		if (scanTime > now) {
 			return false;
 		}
 
 		// scan date must be in the past
-		if (scanDate <= now) {
+		if (scanDate > now) {
 			return false;
 		}
 

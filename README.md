@@ -93,7 +93,7 @@ The test address is:
 ## Deployment Using Lachesis
 
 This is an example script for the contract deployment using Lachesis JavaScript console. Please make sure
-you have a working Lachesis binary installed and running to bo able to use this deployment script.
+you have a working Lachesis binary installed and running to be able to use this deployment script.
 
 1. Open Lachesis JavaScript console `lachesis attach`.
 

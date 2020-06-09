@@ -11,7 +11,7 @@ contract DataHashAuth {
 
 	// products store mapping between authentic product hash and registration
 	// timestamp, the time stamp can be taken from the processing block since
-    // we don't need better time accuracy.
+	// we don't need better time accuracy.
 	mapping (bytes32 => uint) internal products;
 
 	// HashAdded event is emitted on successful
@@ -179,13 +179,13 @@ contract DataHashAuth {
 			return false;
 		}
 
-		// scan time must be in the past
-		if (scanTime > now) {
+		// scan time must be newer than the production date
+		if (scanTime < productionDate) {
 			return false;
 		}
 
-		// scan date must be in the past
-		if (scanDate > now) {
+		// scan date must be newer than the production date
+		if (scanDate  < productionDate) {
 			return false;
 		}
 

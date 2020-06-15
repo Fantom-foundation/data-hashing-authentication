@@ -131,7 +131,7 @@ contract DataHashAuth {
 
     // getProductByHash checks if the product with specified hash
     // exists in the contract context.
-    function getProductByHash(bytes32 memory hash) public view returns (bytes32, uint){
+    function getProductByHash(bytes32 hash) public view returns (bytes32, uint){
         // return the hash and corresponding time stamp if any
         // return zero (the default mapping value for non-existent mapping) otherwise
         return (hash, products[hash]);

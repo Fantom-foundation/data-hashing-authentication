@@ -5,237 +5,159 @@ pragma solidity ^0.5.0;
 // products hash inside the ledger by hashing their unique attributes
 // and validating products authenticity providing the same set of attributes.
 contract DataHashAuth {
+    // TProduct defines the scanned product information stored inside
+    // the contract for future validation.
+    struct TProduct {
+        bytes32 productHash; // hash of the product data for validation
+        string name; // name of the product
+        string producer; // name of the product manufacturer
+        string batchNo; // production batch number
+        string barcode; // barcode of the product
+        uint64 produced; // the UTC timestamp of the production date
+        uint64 expiration; // the UTC timestamp of the expiration date
+        uint64 added; // the time stamp of the product record creation
+        uint64 updated; // the time stamp of the last product update
+    }
+
     // manager is the account allowed to register new authentic products
     // to the contract.
-    address public manager;
+    address public _manager;
 
-    // products store mapping between authentic product hash and registration
-    // timestamp, the time stamp can be taken from the processing block since
-    // we don't need better time accuracy.
-    mapping(bytes32 => uint) internal products;
+    // scanners define access to the product registration
+    // and editing functionality. Only scanners can manage
+    // products pool.
+    mapping (address => bool) public _scanners;
 
-    // HashAdded event is emitted on successful
-    event HashAdded(bytes32 hash, uint time);
+    // products represent mapping between authentic product PIN
+    // and the product details record held inside the contract.
+    mapping(uint256 => TProduct) public _products;
+
+    // ProductAdded event is emitted on new product receival.
+    event ProductAdded(uint256 indexed _pin, bytes32 _hash, uint64 _timestamp);
+
+    // ProductUpdated event is emitted on an existing product data change.
+    event ProductUpdated(uint256 indexed _pin, bytes32 _hash, uint64 _timestamp);
 
     // constructor initializes new contract instance on deployment
     // the creator will also become the hash repository manager
     constructor() public payable {
         // keep the manager reference
-        manager = msg.sender;
+        _manager = msg.sender;
+
+        // manager is the first one allowed to manage products
+        _scanners[msg.sender] = true;
     }
 
-    // addProduct adds new authentic product data set.
-    // Only contract manager is allowed to perform this function.
-    function addProduct(
-        bytes memory name,
-        bytes memory batchNo,
-        bytes memory barcodeNo,
-        uint expiryDate,
-        uint productionDate,
-        uint fdaNo,
-        bytes memory producerName,
-        bytes memory scanLocation,
-        bytes memory scanStatus,
-        uint scanTime,
-        uint scanDate
-    ) public payable returns (bytes32) {
-        // make sure this is the manager
-        require(msg.sender == manager, "only managers can add new products");
-
-        // make sure this is a valid product
-        require(_isValid(
-                name,
-                batchNo,
-                barcodeNo,
-                expiryDate,
-                productionDate,
-                fdaNo,
-                producerName,
-                scanLocation,
-                scanStatus,
-                scanTime,
-                scanDate
-            ));
+    // setProduct adds new authentic product data set, or updates
+    // an existing product set in the contract. The PIN is used
+    // as an unique identifier of the product, hash is generated
+    // to support the product details validation on subsequent checks.
+    // Only authenticated scanners are allowed to perform this function.
+    function setProduct(
+        uint256 _pin,
+        string calldata _name,
+        string calldata _producerName,
+        string calldata _batchNo,
+        string calldata _barcodeNo,
+        uint64 _productionDate,
+        uint64 _expiryDate
+    ) external returns (bytes32) {
+        // make sure this is autenticated access
+        require(_scanners[msg.sender], "access restricted");
 
         // calculate the hash
-        bytes32 hash = _hashProduct(name, batchNo, barcodeNo, expiryDate, productionDate, producerName);
+        bytes32 _hash = _hashProduct(
+            _pin,
+            _name,
+            _producerName,
+            _batchNo,
+            _barcodeNo,
+            _expiryDate,
+            _productionDate);
 
-        // make sure the product is not already enlisted with the contract
-        require(products[hash] == 0, "product already listed");
+        // the product PIN is expected to be unique
+        bool isNew = (_products[_pin].added == 0);
 
-        // enlist the product
-        products[hash] = now;
-        emit HashAdded(hash, now);
+        // enlist the product in the contract
+        TProduct storage inProduct = _products[_pin];
+        inProduct.productHash = _hash;
+        inProduct.name = _name;
+        inProduct.producer = _producerName;
+        inProduct.batchNo = _batchNo;
+        inProduct.barcode = _barcodeNo;
+        inProduct.produced = _productionDate;
+        inProduct.expiration = _expiryDate;
 
-        // return the hash value
-        return hash;
+        // set the product timestamp record to recognize the action
+        // emit the product event based on set status
+        if (isNew) {
+            // the product didn't exist before and so it's a new one
+            inProduct.added = now;
+            emit ProductAdded(_pin, _hash, now);
+        } else {
+            // the product existed before and so it's an update
+            inProduct.updated = now;
+            emit ProductUpdated(_pin, _hash, now);
+        }
+
+        // return the generated hash value
+        return _hash;
+    }
+
+    // productHashByPin returns a hash of a product identified by the PIN
+    // if the product is recognized by the contract, or zero hash for unknown
+    // products.
+    function productHashByPin(uint256 _pin) external view returns (bytes32) {
+        return _products[_pin].productHash;
     }
 
     // authProduct validates product authenticity for the given product data set
     // using an internal authentic products list. Anybody can authenticate
     // products using this function, no access restrictions are applied.
     function authProduct(
-        bytes memory name,
-        bytes memory batchNo,
-        bytes memory barcodeNo,
-        uint expiryDate,
-        uint productionDate,
-        uint fdaNo,
-        bytes memory producerName,
-        bytes memory scanLocation,
-        bytes memory scanStatus,
-        uint scanTime,
-        uint scanDate
-    ) public view returns (bytes32, uint){
-        // make sure this is a valid product
-        require(_isValid(
-                name,
-                batchNo,
-                barcodeNo,
-                expiryDate,
-                productionDate,
-                fdaNo,
-                producerName,
-                scanLocation,
-                scanStatus,
-                scanTime,
-                scanDate
-            ));
-
+        uint256 _pin,
+        string calldata _name,
+        string calldata _producerName,
+        string calldata _batchNo,
+        string calldata _barcodeNo,
+        uint64 _productionDate,
+        uint64 _expiryDate
+    ) public view returns (bytes32, bool) {
         // calculate the hash
-        bytes32 hash = _hashProduct(name, batchNo, barcodeNo, expiryDate, productionDate, producerName);
+        bytes32 _hash = _hashProduct(
+            _pin,
+            _name,
+            _producerName,
+            _batchNo,
+            _barcodeNo,
+            _expiryDate,
+            _productionDate);
 
-        // return the hash and corresponding time stamp if any
-        // return zero (the default mapping value for non-existent mapping) otherwise
-        return (hash, products[hash]);
-    }
-
-    // getProduct checks if the product with specified subset of scan parameters
-    // does exist in the contract context. The function omits any product data
-    // validity checks in favor of speed and simplicity.
-    function getProduct(
-        bytes memory name,
-        bytes memory batchNo,
-        bytes memory barcodeNo,
-        uint expiryDate,
-        uint productionDate,
-        bytes memory producerName
-    ) public view returns (bytes32, uint){
-        // calculate the hash
-        bytes32 hash = _hashProduct(name, batchNo, barcodeNo, expiryDate, productionDate, producerName);
-
-        // return the hash and corresponding time stamp if any
-        // return zero (the default mapping value for non-existent mapping) otherwise
-        return (hash, products[hash]);
-    }
-
-    // getProductByHash checks if the product with specified hash
-    // exists in the contract context.
-    function getProductByHash(bytes32 hash) public view returns (bytes32, uint){
-        // return the hash and corresponding time stamp if any
-        // return zero (the default mapping value for non-existent mapping) otherwise
-        return (hash, products[hash]);
-    }
-
-    // _isValid validates the input product record checking
-    // for basic requirements it has to meet.
-    // We check if:
-    //    - hash building fields are all present and non-empty
-    //    - production date is in the past
-    //    - expiry date is in the future
-    //    - all other (non-hashed) fields are present
-    function _isValid(
-        bytes memory name,
-        bytes memory batchNo,
-        bytes memory barcodeNo,
-        uint expiryDate,
-        uint productionDate,
-        uint fdaNo,
-        bytes memory producerName,
-        bytes memory scanLocation,
-        bytes memory scanStatus,
-        uint scanTime,
-        uint scanDate
-    ) internal view returns (bool) {
-        // name must not be empty
-        if (0 == name.length) {
-            return false;
-        }
-
-        // batch no must not be empty
-        if (0 == batchNo.length) {
-            return false;
-        }
-
-        // bar code no must not be empty
-        if (0 == barcodeNo.length) {
-            return false;
-        }
-
-        // bar code no must not be empty
-        if (0 == producerName.length) {
-            return false;
-        }
-
-        // expiration date must be in the future
-        if (expiryDate <= now) {
-            return false;
-        }
-
-        // production date must be in the past
-        if (productionDate >= now) {
-            return false;
-        }
-
-        // --------------------------------------------
-        // non-hashed scan elements below this line
-        // --------------------------------------------
-
-        // scan location no must not be empty
-        if (0 == scanLocation.length) {
-            return false;
-        }
-
-        // scan status must not be empty
-        if (0 == scanStatus.length) {
-            return false;
-        }
-
-        // FDA number must be non-zero
-        if (0 == fdaNo) {
-            return false;
-        }
-
-        // scan time must be newer than the production date
-        if (scanTime < productionDate) {
-            return false;
-        }
-
-        // scan date must be newer than the production date
-        if (scanDate < productionDate) {
-            return false;
-        }
-
-        return true;
+        // return the calculated hash and TRUE if the product
+        // is authentic, or FALSE for wrong product details
+        return (_hash, _hash == _products[_pin].productHash);
     }
 
     // _hash calculates the hash of the product used for both
     // the product registration and validation procedures.
     function _hashProduct(
-        bytes memory name,
-        bytes memory batchNo,
-        bytes memory barcodeNo,
-        uint expiryDate,
-        uint productionDate,
-        bytes memory producerName
+        uint256 _pin,
+        string calldata _name,
+        string calldata _producerName,
+        string calldata _batchNo,
+        string calldata _barcodeNo,
+        uint64 _productionDate,
+        uint64 _expiryDate
     ) internal pure returns (bytes32) {
+        // calculate the hash from encoded product data pack
         return keccak256(abi.encode(
-                name,
-                batchNo,
-                barcodeNo,
-                expiryDate,
-                productionDate,
-                producerName
+                _pin,
+                _name,
+                _batchNo,
+                _barcodeNo,
+                _expiryDate,
+                _productionDate,
+                _producerName
             ));
     }
 }

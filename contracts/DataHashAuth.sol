@@ -17,6 +17,7 @@ contract DataHashAuth {
         uint64 expiration; // the UTC timestamp of the expiration date
         uint64 added; // the time stamp of the product record creation
         uint64 updated; // the time stamp of the last product update
+        unit64 invalidated; // the time stamp of the product invalidation
     }
 
     // manager is the account allowed to register new authentic products
@@ -37,6 +38,9 @@ contract DataHashAuth {
 
     // ProductUpdated event is emitted on an existing product data change.
     event ProductUpdated(uint256 indexed _pin, bytes32 _hash, uint64 _timestamp);
+
+    // ProductInvalidated event is emitted on marking a product as invalid.
+    event ProductInvalidated(uint256 indexed _pin, uint64 _timestamp);
 
     // constructor initializes new contract instance on deployment
     // the creator will also become the hash repository manager
@@ -108,6 +112,10 @@ contract DataHashAuth {
     // if the product is recognized by the contract, or zero hash for unknown
     // products.
     function productHashByPin(uint256 _pin) external view returns (bytes32) {
+        // invalidated products are skipped on this check
+        if (_products[_pin].invalidated > 0) {
+            return 0x0;
+        }
         return _products[_pin].productHash;
     }
 
@@ -135,7 +143,22 @@ contract DataHashAuth {
 
         // return the calculated hash and TRUE if the product
         // is authentic, or FALSE for wrong product details
-        return (_hash, _hash == _products[_pin].productHash);
+        return (_hash, 0 == _products[_pin].invalidated && _hash == _products[_pin].productHash);
+    }
+
+    // invalidate sets the product status to invalid.
+    function invalidate(uint256 _pin) external {
+        // make sure this is autenticated access
+        require(_scanners[msg.sender], "access restricted");
+
+        // make sure the product is known
+        require(_products[_pin].added > 0, "unknown product");
+
+        // make the change
+        _products[_pin].invalidated = now;
+
+        // emit the event
+        emit ProductInvalidated(_pin, now);
     }
 
     // _hash calculates the hash of the product used for both

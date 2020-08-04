@@ -54,6 +54,12 @@ contract DataHashAuth {
     // ProductInvalidated event is emitted on marking a product as invalid.
     event ProductInvalidated(uint256 indexed _pin, uint64 _timestamp);
 
+    // ScannerPromoted event is emitted on adding new authorized scanner.
+    event ScannerPromoted(address indexed _addr, uint64 _timestamp);
+
+    // ScannerDemoted event is emitted on removing a scanner from authorized.
+    event ScannerDemoted(address indexed _addr, uint64 _timestamp);
+
     // constructor initializes new contract instance on deployment
     // the creator will also become the hash repository manager
     constructor() public payable {
@@ -62,6 +68,28 @@ contract DataHashAuth {
 
         // manager is the first one allowed to manage products
         _scanners[msg.sender] = true;
+    }
+
+    // promote adds a new authorized scanner address
+    // into the contract.
+    function promote(address _addr) external {
+        // only manager can authorize
+        require(msg.sender == _manager, "access restricted");
+
+        // authorize the address and inform listeners
+        _scanners[_addr] = true;
+        emit ScannerPromoted(_addr, uint64(now));
+    }
+
+    // demote removes the specified address
+    // from authorized scanners.
+    function demote(address _addr) external {
+        // only manager can authorize
+        require(msg.sender == _manager, "access restricted");
+
+        // authorize the address
+        _scanners[_addr] = false;
+        emit ScannerDemoted(_addr, uint64(now));
     }
 
     // register adds/updates a batch of products information
@@ -83,58 +111,6 @@ contract DataHashAuth {
                 _inProducts[i].produced,
                 _inProducts[i].expiration
             );
-        }
-    }
-
-    // _store adds new authentic product data set, or updates
-    // an existing product set in the contract. The PIN is used
-    // as an unique identifier of the product, hash is generated
-    // to support the product details validation on subsequent checks.
-    // Only authenticated scanners are allowed to perform this function.
-    function _store(
-        uint256 _pin,
-        string memory _name,
-        string memory _producerName,
-        string memory _batchNo,
-        string memory _barcodeNo,
-        uint64 _productionDate,
-        uint64 _expiryDate
-    ) private {
-        // the product PIN is expected to be unique
-        bool isNew = (_products[_pin].added == 0);
-
-        // calculate the hash
-        bytes32 _hash = _hashProduct(
-            _pin,
-            _name,
-            _producerName,
-            _batchNo,
-            _barcodeNo,
-            _expiryDate,
-            _productionDate);
-
-        // enlist the product in the contract (aloc the storage for it)
-        TProduct storage inProduct = _products[_pin];
-
-        // update the product data
-        inProduct.productHash = _hash;
-        inProduct.name = _name;
-        inProduct.producer = _producerName;
-        inProduct.batchNo = _batchNo;
-        inProduct.barcode = _barcodeNo;
-        inProduct.produced = _productionDate;
-        inProduct.expiration = _expiryDate;
-
-        // set the product timestamp record to recognize the action
-        // and emit the appropriate product event
-        if (isNew) {
-            // the product didn't exist before and so it's a new one
-            inProduct.added = uint64(now);
-            emit ProductAdded(_pin, _hash, uint64(now));
-        } else {
-            // the product existed before and so it's an update
-            inProduct.updated = uint64(now);
-            emit ProductUpdated(_pin, _hash, uint64(now));
         }
     }
 
@@ -189,6 +165,58 @@ contract DataHashAuth {
 
         // emit the event
         emit ProductInvalidated(_pin, uint64(now));
+    }
+
+    // _store adds new authentic product data set, or updates
+    // an existing product set in the contract. The PIN is used
+    // as an unique identifier of the product, hash is generated
+    // to support the product details validation on subsequent checks.
+    // Only authenticated scanners are allowed to perform this function.
+    function _store(
+        uint256 _pin,
+        string memory _name,
+        string memory _producerName,
+        string memory _batchNo,
+        string memory _barcodeNo,
+        uint64 _productionDate,
+        uint64 _expiryDate
+    ) private {
+        // the product PIN is expected to be unique
+        bool isNew = (_products[_pin].added == 0);
+
+        // calculate the hash
+        bytes32 _hash = _hashProduct(
+            _pin,
+            _name,
+            _producerName,
+            _batchNo,
+            _barcodeNo,
+            _expiryDate,
+            _productionDate);
+
+        // enlist the product in the contract (aloc the storage for it)
+        TProduct storage inProduct = _products[_pin];
+
+        // update the product data
+        inProduct.productHash = _hash;
+        inProduct.name = _name;
+        inProduct.producer = _producerName;
+        inProduct.batchNo = _batchNo;
+        inProduct.barcode = _barcodeNo;
+        inProduct.produced = _productionDate;
+        inProduct.expiration = _expiryDate;
+
+        // set the product timestamp record to recognize the action
+        // and emit the appropriate product event
+        if (isNew) {
+            // the product didn't exist before and so it's a new one
+            inProduct.added = uint64(now);
+            emit ProductAdded(_pin, _hash, uint64(now));
+        } else {
+            // the product existed before and so it's an update
+            inProduct.updated = uint64(now);
+            emit ProductUpdated(_pin, _hash, uint64(now));
+        }
     }
 
     // _hash calculates the hash of the product used for both

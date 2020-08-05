@@ -9,220 +9,146 @@ contract DataHashAuth {
     // TProduct defines the scanned product information stored inside
     // the contract for future validation.
     struct TProduct {
-        bytes32 productHash; // hash of the product data for validation
         string name; // name of the product
-        string producer; // name of the product manufacturer
+        string producerName; // name of the product manufacturer
         string batchNo; // production batch number
-        string barcode; // barcode of the product
-        uint64 produced; // the UTC timestamp of the production date
-        uint64 expiration; // the UTC timestamp of the expiration date
+        string barcodeNo; // barcode of the product
+        uint64 productionDate; // the UTC timestamp of the production date
+        uint64 expiryDate; // the UTC timestamp of the expiration date
         uint64 added; // the time stamp of the product record creation
         uint64 updated; // the time stamp of the last product update
         uint64 invalidated; // the time stamp of the product invalidation
+        bytes32 productHash; // hash of the product data for validation
+    }
+
+    // TPin represents an information about generated product PIN,
+    // associated with a product through product id (PID).
+    struct TPin {
+        uint64 pid; // unique identifier of the product the PIN belongs to
+        uint64 added; // the timestamp of the PIN generation
     }
 
     // InputProduct defines a structure for product input.
     struct InputProduct {
-        uint256 pin;
-        string name;
-        string producer;
-        string batchNo;
-        string barcode;
-        uint64 produced;
-        uint64 expiration;
+        uint64 pid; // unique product identifier
+        string name; // name of the product
+        string producer; // name of the producer
+        string batchNo; // batch number
+        string barcodeNo; // barcode number
+        uint64 productionDate; // timestamp of the production
+        uint64 expiryDate; // timestamp of the expiration
     }
 
-    // manager is the account allowed to register new authentic products
-    // to the contract.
-    address public _manager;
+    // admin is the account allowed to change contract parameters.
+    address public _admin;
 
-    // scanners define access to the product registration
-    // and editing functionality. Only scanners can manage
-    // products pool.
-    mapping (address => bool) public _scanners;
+    // proManagers are the accounts allowed to add new products
+    // and product related data into the contract.
+    mapping (address => bool) public _proManagers;
 
-    // products represent mapping between authentic product PIN
+    // products represent mapping between unique product PID
     // and the product details record held inside the contract.
-    mapping(uint256 => TProduct) public _products;
+    mapping(uint64 => TProduct) public _products;
+
+    // productPins represent mapping between authentic product PIN
+    // and the PIN record held inside the contract.
+    mapping(uint256 => TPin) public _productPins;
 
     // ProductAdded event is emitted on new product receival.
-    event ProductAdded(uint256 indexed _pin, bytes32 _hash, uint64 _timestamp);
+    event ProductAdded(uint64 indexed _pid, bytes32 _hash, uint64 _timestamp);
 
     // ProductUpdated event is emitted on an existing product data change.
-    event ProductUpdated(uint256 indexed _pin, bytes32 _hash, uint64 _timestamp);
+    event ProductUpdated(uint64 indexed _pid, bytes32 _hash, uint64 _timestamp);
 
     // ProductInvalidated event is emitted on marking a product as invalid.
-    event ProductInvalidated(uint256 indexed _pin, uint64 _timestamp);
+    event ProductInvalidated(uint64 indexed _pid, uint64 _timestamp);
 
-    // ScannerPromoted event is emitted on adding new authorized scanner.
-    event ScannerPromoted(address indexed _addr, uint64 _timestamp);
+    // PinAdded event is emitted on adding a new PIN to the contract.
+    event PinAdded(uint64 indexed _pid, uint256 indexed _pin, uint64 _timestamp);
 
-    // ScannerDemoted event is emitted on removing a scanner from authorized.
-    event ScannerDemoted(address indexed _addr, uint64 _timestamp);
+    // ManagerPromoted event is emitted on adding new authorized scanner.
+    event ManagerPromoted(address indexed _addr, uint64 _timestamp);
+
+    // ManagerDemoted event is emitted on removing a scanner from authorized.
+    event ManagerDemoted(address indexed _addr, uint64 _timestamp);
 
     // constructor initializes new contract instance on deployment
     // the creator will also become the hash repository manager
     constructor() public payable {
-        // keep the manager reference
-        _manager = msg.sender;
+        // keep the administrator reference
+        _admin = msg.sender;
 
-        // manager is the first one allowed to manage products
-        _scanners[msg.sender] = true;
+        // administrator is the first one allowed to manage products
+        _proManagers[msg.sender] = true;
     }
 
-    // promote adds a new authorized scanner address
-    // into the contract.
-    function promote(address _addr) external {
-        // only manager can authorize
-        require(msg.sender == _manager, "access restricted");
+    // ----------------------------------------------------------------
+    // products management
+    // ----------------------------------------------------------------
 
-        // authorize the address and inform listeners
-        _scanners[_addr] = true;
-        emit ScannerPromoted(_addr, uint64(now));
-    }
-
-    // demote removes the specified address
-    // from authorized scanners.
-    function demote(address _addr) external {
-        // only manager can authorize
-        require(msg.sender == _manager, "access restricted");
-
-        // authorize the address
-        _scanners[_addr] = false;
-        emit ScannerDemoted(_addr, uint64(now));
-    }
-
-    // register adds/updates a batch of products information
-    // from an authorized scanner address in the contract.
-    function register(InputProduct[] calldata _inProducts) external {
+    // setProduct adds or updates a product information
+    // from an authorized product manager address in the contract.
+    function setProduct(InputProduct calldata _product) external {
         // make sure this is autenticated access
-        require(_scanners[msg.sender], "access restricted");
+        require(_proManagers[msg.sender], "access restricted");
 
-        // loop all incoming data records and process each
-        // into the contract
-        for (uint i = 0; i < _inProducts.length; i++) {
-            // process the product in the contract
-            _store(
-                _inProducts[i].pin,
-                _inProducts[i].name,
-                _inProducts[i].producer,
-                _inProducts[i].batchNo,
-                _inProducts[i].barcode,
-                _inProducts[i].produced,
-                _inProducts[i].expiration
-            );
-        }
-    }
-
-    // auth validates product authenticity for the given product data set
-    // using an internal authentic products list. Anybody can authenticate
-    // products using this function, no access restrictions are applied.
-    function auth(
-        uint256 _pin,
-        string memory _name,
-        string memory _producerName,
-        string memory _batchNo,
-        string memory _barcodeNo,
-        uint64 _productionDate,
-        uint64 _expiryDate
-    ) public view returns (bytes32, bool) {
-        // calculate the hash
-        bytes32 _hash = _hashProduct(
-            _pin,
-            _name,
-            _producerName,
-            _batchNo,
-            _barcodeNo,
-            _expiryDate,
-            _productionDate);
-
-        // return the calculated hash and TRUE if the product
-        // is authentic, or FALSE for wrong product details
-        return (_hash, 0 == _products[_pin].invalidated && _hash == _products[_pin].productHash);
-    }
-
-    // hashByPin returns a hash of a product identified by the PIN.
-    // If the product is not recognized by the contract,
-    // zero hash is returned.
-    function hashByPin(uint256 _pin) external view returns (bytes32) {
-        // invalidated products are skipped on this check
-        if (_products[_pin].invalidated > 0) {
-            return 0x0;
-        }
-        return _products[_pin].productHash;
-    }
-
-    // invalidate sets the product status to invalid.
-    function invalidate(uint256 _pin) external {
-        // make sure this is autenticated access
-        require(_scanners[msg.sender], "access restricted");
-
-        // make sure the product is known
-        require(_products[_pin].added > 0, "unknown product");
-
-        // make the change
-        _products[_pin].invalidated = uint64(now);
-
-        // emit the event
-        emit ProductInvalidated(_pin, uint64(now));
-    }
-
-    // _store adds new authentic product data set, or updates
-    // an existing product set in the contract. The PIN is used
-    // as an unique identifier of the product, hash is generated
-    // to support the product details validation on subsequent checks.
-    // Only authenticated scanners are allowed to perform this function.
-    function _store(
-        uint256 _pin,
-        string memory _name,
-        string memory _producerName,
-        string memory _batchNo,
-        string memory _barcodeNo,
-        uint64 _productionDate,
-        uint64 _expiryDate
-    ) private {
         // the product PIN is expected to be unique
-        bool isNew = (_products[_pin].added == 0);
+        bool isNew = (_products[_product.pid].added == 0);
 
         // calculate the hash
         bytes32 _hash = _hashProduct(
-            _pin,
-            _name,
-            _producerName,
-            _batchNo,
-            _barcodeNo,
-            _expiryDate,
-            _productionDate);
+            _product.pid,
+            _product.name,
+            _product.producer,
+            _product.batchNo,
+            _product.barcodeNo,
+            _product.expiryDate,
+            _product.productionDate);
 
         // enlist the product in the contract (aloc the storage for it)
-        TProduct storage inProduct = _products[_pin];
+        TProduct storage inProduct = _products[_product.pid];
 
         // update the product data
+        inProduct.name = _product.name;
+        inProduct.producerName = _product.producer;
+        inProduct.batchNo = _product.batchNo;
+        inProduct.barcodeNo = _product.barcodeNo;
+        inProduct.productionDate = _product.productionDate;
+        inProduct.expiryDate = _product.expiryDate;
         inProduct.productHash = _hash;
-        inProduct.name = _name;
-        inProduct.producer = _producerName;
-        inProduct.batchNo = _batchNo;
-        inProduct.barcode = _barcodeNo;
-        inProduct.produced = _productionDate;
-        inProduct.expiration = _expiryDate;
 
         // set the product timestamp record to recognize the action
         // and emit the appropriate product event
         if (isNew) {
             // the product didn't exist before and so it's a new one
             inProduct.added = uint64(now);
-            emit ProductAdded(_pin, _hash, uint64(now));
+            emit ProductAdded(_product.pid, _hash, uint64(now));
         } else {
             // the product existed before and so it's an update
             inProduct.updated = uint64(now);
-            emit ProductUpdated(_pin, _hash, uint64(now));
+            emit ProductUpdated(_product.pid, _hash, uint64(now));
         }
+    }
+
+    // invalidate a product identified by it's unique PID id.
+    function invalidate(uint64 _pid) external {
+        // make sure this is autenticated access
+        require(_proManagers[msg.sender], "access restricted");
+
+        // make sure the product is known
+        require(_products[_pid].added > 0, "unknown product");
+
+        // make the change
+        _products[_pid].invalidated = uint64(now);
+
+        // emit the event
+        emit ProductInvalidated(_pid, uint64(now));
     }
 
     // _hash calculates the hash of the product used for both
     // the product registration and validation procedures.
     function _hashProduct(
-        uint256 _pin,
+        uint64 _pid,
         string memory _name,
         string memory _producerName,
         string memory _batchNo,
@@ -232,7 +158,7 @@ contract DataHashAuth {
     ) internal pure returns (bytes32) {
         // calculate the hash from encoded product data pack
         return keccak256(abi.encode(
-                _pin,
+                _pid,
                 _name,
                 _batchNo,
                 _barcodeNo,
@@ -240,5 +166,97 @@ contract DataHashAuth {
                 _productionDate,
                 _producerName
             ));
+    }
+
+    // ----------------------------------------------------------------
+    // product PIN management (the PIN is what's printed on QR patches)
+    // ----------------------------------------------------------------
+
+    // addPins adds a new set of PINs for the product identified
+    // by the unique product PID.
+    function addPins(uint64 _pid, uint256[] calldata _pins) external {
+        // make sure this is autenticated access
+        require(_proManagers[msg.sender], "access restricted");
+
+        // we do not check product existence here since the product may
+        // be added later based on client data processing queue.
+        for (uint i = 0; i < _pins.length; i++) {
+            // access the PIN record
+             TPin storage inPin = _productPins[_pins[i]];
+
+            // make sure this pin is new
+            if (0 == inPin.added) {
+                // add the PIN
+                inPin.pid = _pid;
+                inPin.added = uint64(now);
+
+                // emit the event
+                emit PinAdded(_pid, _pins[i], uint64(now));
+            }
+        }
+    }
+
+    // ckeck validates product authenticity for the given product data set
+    // using an internal authentic products list. Anybody can authenticate
+    // products using this function, no access restrictions are applied.
+    function check(
+        uint256 _pin,
+        string memory _name,
+        string memory _producerName,
+        string memory _batchNo,
+        string memory _barcodeNo,
+        uint64 _productionDate,
+        uint64 _expiryDate
+    ) public view returns (bool) {
+        // do we even know the PIN?
+        if (0 == _productPins[_pin].added) {
+            return false;
+        }
+
+        // get the product PID
+        uint64 _pid = _productPins[_pin].pid;
+
+        // calculate the hash
+        bytes32 _hash = _hashProduct(
+            _pid,
+            _name,
+            _producerName,
+            _batchNo,
+            _barcodeNo,
+            _expiryDate,
+            _productionDate);
+
+        // compare the product details hash with the stored product details
+        // make sure the product has not been invalidated
+        return (
+            _hash == _products[_pid].productHash &&
+            0 == _products[_pid].invalidated
+        );
+    }
+
+    // ----------------------------------------------------------------
+    // contract internals management
+    // ----------------------------------------------------------------
+
+    // promote adds a new authorized scanner address
+    // into the contract.
+    function promote(address _addr) external {
+        // only manager can authorize
+        require(msg.sender == _admin, "access restricted");
+
+        // authorize the address and inform listeners
+        _proManagers[_addr] = true;
+        emit ManagerPromoted(_addr, uint64(now));
+    }
+
+    // demote removes the specified address
+    // from authorized scanners.
+    function demote(address _addr) external {
+        // only manager can authorize
+        require(msg.sender == _admin, "access restricted");
+
+        // authorize the address
+        _proManagers[_addr] = false;
+        emit ManagerDemoted(_addr, uint64(now));
     }
 }

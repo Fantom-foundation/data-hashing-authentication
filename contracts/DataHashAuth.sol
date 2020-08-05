@@ -21,13 +21,6 @@ contract DataHashAuth {
         bytes32 productHash; // hash of the product data for validation
     }
 
-    // TPin represents an information about generated product PIN,
-    // associated with a product through product id (PID).
-    struct TPin {
-        uint64 pid; // unique identifier of the product the PIN belongs to
-        uint64 added; // the timestamp of the PIN generation
-    }
-
     // InputProduct defines a structure for product input.
     struct InputProduct {
         uint64 pid; // unique product identifier
@@ -46,13 +39,13 @@ contract DataHashAuth {
     // and product related data into the contract.
     mapping (address => bool) public _proManagers;
 
-    // products represent mapping between unique product PID
+    // products represents mapping between unique product PID
     // and the product details record held inside the contract.
     mapping(uint64 => TProduct) public _products;
 
-    // productPins represent mapping between authentic product PIN
-    // and the PIN record held inside the contract.
-    mapping(uint256 => TPin) public _productPins;
+    // pinToProductPid represents mapping between authentic product PIN
+    // and a unique product identifier, the PID.
+    mapping(uint256 => uint64) public _pinToProductPid;
 
     // ProductAdded event is emitted on new product receival.
     event ProductAdded(uint64 indexed _pid, bytes32 _hash, uint64 _timestamp);
@@ -181,14 +174,10 @@ contract DataHashAuth {
         // we do not check product existence here since the product may
         // be added later based on client data processing queue.
         for (uint i = 0; i < _pins.length; i++) {
-            // access the PIN record
-             TPin storage inPin = _productPins[_pins[i]];
-
             // make sure this pin is new
-            if (0 == inPin.added) {
-                // add the PIN
-                inPin.pid = _pid;
-                inPin.added = uint64(now);
+            if (0 == _pinToProductPid[_pins[i]]) {
+                // add the PIN to PID link
+                _pinToProductPid[_pins[i]] = _pid;
 
                 // emit the event
                 emit PinAdded(_pid, _pins[i], uint64(now));
@@ -209,12 +198,12 @@ contract DataHashAuth {
         uint64 _expiryDate
     ) public view returns (bool) {
         // do we even know the PIN?
-        if (0 == _productPins[_pin].added) {
+        if (0 == _pinToProductPid[_pin]) {
             return false;
         }
 
         // get the product PID
-        uint64 _pid = _productPins[_pin].pid;
+        uint64 _pid = _pinToProductPid[_pin];
 
         // calculate the hash
         bytes32 _hash = _hashProduct(
